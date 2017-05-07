@@ -1,2 +1,5 @@
 # IrRepeater
-IrRepeater on ESP8266
+
+This is Ir Remote Repeater on ESP8266.
+
+Currently it's under prototyping.
