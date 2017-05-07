@@ -82,6 +82,7 @@ void terminateIrPWM(void)
   PWMManager* pPWMManager = PWMManager::getInstance();
   pPWMManager->removePWM(g_irLED); // irLED is removed by this
   pPWMManager->terminate();
+  detachInterrupt(IR_INPUT);
 }
 
 
@@ -111,18 +112,19 @@ void setup() {
 
 void handleIrRelay(void)
 {
-  if( !g_bEnableIrRelay || digitalRead(IR_INPUT) == 1 ) return;
+  volatile int current = digitalRead(IR_INPUT);
+  if( !g_bEnableIrRelay || current == 1 ) return;
 
+  detachInterrupt(IR_INPUT);
   // something code is received
-  DEBUG_PRINT("handleIrRelay 0");
   wdt_disable();
 
   g_irLED->setEnableOutput(true);
-  int current = digitalRead(IR_INPUT);
-  int nReceived = 0;
+  volatile int nReceived = 1;
 
-  unsigned long last_time = micros();
-  bool bLoop = true;
+  volatile unsigned long last_time = micros();
+  volatile unsigned long start_time = last_time;
+  volatile bool bLoop = true;
   do {
     if( current ^ digitalRead(IR_INPUT) ){
       current = digitalRead(IR_INPUT);
@@ -137,18 +139,17 @@ void handleIrRelay(void)
     }
   } while (bLoop);
 
-#if 1
-  if( nReceived ){
-      DEBUG_PRINT(": ");
-      DEBUG_PRINT(nReceived);
-      DEBUG_PRINT(" codes received.");
-  }
-#endif // _DEBUG
+  DEBUG_PRINT("IrRelay: ");
+  DEBUG_PRINT(nReceived);
+  DEBUG_PRINT(" codes in ");
+  DEBUG_PRINT((last_time-start_time));
+  DEBUG_PRINT(" usec ");
   DEBUG_PRINTLN(": time out");
 
   g_irLED->setEnableOutput(false);
 
   wdt_enable(WDTO_8S);
+  attachInterrupt(IR_INPUT, handleIrRelay, CHANGE);
 }
 
 void loop() {
